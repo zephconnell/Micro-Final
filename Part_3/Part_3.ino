@@ -69,7 +69,7 @@ void convertCtoF(byte wC, int fC, byte *wF, int *fF ) {
   *fF = FK%10000L;
 }
 
-int convert(byte value)
+int convertToDec(byte value)
 {
   return (value & 0x0f) + ((value & 0x70) >> 4) *10;
 }
@@ -142,7 +142,7 @@ void loop() {
   Wire.requestFrom(RTC_I2C_ADDR,1);
   value=Wire.read();
 
-  sprintf(Hours,"%02d",convert(value));
+  sprintf(Hours,"%02d",convertToDec(value));
   lcd.setCursor(0, 0);
   lcd.print(Hours);
 
@@ -158,7 +158,7 @@ void loop() {
   Wire.requestFrom(RTC_I2C_ADDR,1);
   value=Wire.read();
 
-  sprintf(Minutes,"%02d",convert(value));
+  sprintf(Minutes,"%02d",convertToDec(value));
   lcd.setCursor(3, 0);
   lcd.print(Minutes);
 
@@ -174,7 +174,7 @@ void loop() {
   Wire.requestFrom(RTC_I2C_ADDR,1);
   value=Wire.read();
   
-  sprintf(Seconds,"%02d",convert(value));
+  sprintf(Seconds,"%02d",convertToDec(value));
   lcd.setCursor(6, 0);
   lcd.print(Seconds);
   
@@ -187,7 +187,7 @@ void loop() {
   value=Wire.read();
 
   lcd.setCursor(0, 1);
-  lcd.print(MonthName[convert(value)-1]); 
+  lcd.print(MonthName[convertToDec(value)-1]); 
 
 // DAY
 //---------------------------------------------------------------------------------------
@@ -201,7 +201,7 @@ void loop() {
   Wire.requestFrom(RTC_I2C_ADDR,1);
   value=Wire.read();
 
-  sprintf(Day,"%02d",convert(value));
+  sprintf(Day,"%02d",convertToDec(value));
   lcd.setCursor(4, 1);
   lcd.print(Day);  
 
@@ -219,7 +219,7 @@ void loop() {
   
   lcd.setCursor(7, 1);
   lcd.print("20");
-  lcd.print(convert(value));  
+  lcd.print(convertToDec(value));  
 
 // DAY OF WEEK
 //---------------------------------------------------------------------------------------
