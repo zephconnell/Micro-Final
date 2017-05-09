@@ -68,7 +68,7 @@ void convertCtoF(byte wC, int fC, byte *wF, int *fF ) {
 
 int convertToDec(byte value)
 {
-  return (value & 0x0f) + ((value & 0x70) >> 4) *10;
+  return (value & 0x0f) + ((value & 0xf0) >> 4) *10;
 }
 
 byte convertToHexish(byte value)
@@ -90,12 +90,12 @@ void setup() {
   Wire.endTransmission();
   // Set minutes, hours, day, date, month, year
   mybuff[0]=RTC_MINS; // Address to begin writing into RTC
-  mybuff[1]=0x00;       // Minute count is 00 (BCD)
-  mybuff[2]=0x00;       // 24hr format, hour is 00 
+  mybuff[1]=0x49;       // Minute count is 49 (BCD)
+  mybuff[2]=0x19;       // 24hr format, hour is 19 
   mybuff[3]=0x01;       // First day of the week
-  mybuff[4]=0x01;       // 1st day of the month
+  mybuff[4]=0x19;       // 19th day of the month
   mybuff[5]=0x01;       // 1st month of the year
-  mybuff[6]=0x01;       // year 2001
+  mybuff[6]=0x79;       // year 2089
   mybuff[7]=0x43;       // No alarms, square wave output at 32.768 kHz
   Wire.beginTransmission(RTC_I2C_ADDR);
   Wire.write(mybuff,8);
@@ -178,7 +178,7 @@ void loop() {
     Wire.requestFrom(RTC_I2C_ADDR,1);
     value=Wire.read();
   
-    sprintf(Temp,"%02d",convertToDec(value));
+    sprintf(Temp,"%02d",(value & 0x0f) + ((value & 0x70) >> 4) *10);
     lcd.setCursor(6, 0);
     lcd.print(Temp);
   
@@ -191,7 +191,7 @@ void loop() {
     value=Wire.read();
 
     lcd.setCursor(0, 1);
-    lcd.print(MonthName[convertToDec(value)-1]); 
+    lcd.print(MonthName[ convertToDec(0x1f & value) - 1] ); 
 
     // DAY
     //---------------------------------------------------------------------------------------
@@ -276,14 +276,8 @@ void loop() {
     
   }
   
-else if(state == 1) // GET YEAR
+else if(state == 1) // Stop clock and GET YEAR
   {
-    // Disable RTC in order to allow for unambiguous set-up of time/date.
-    mybuff[0]=RTC_ST_SEC; mybuff[1]=0x00;
-    Wire.beginTransmission(RTC_I2C_ADDR);
-    Wire.write(mybuff,2);
-    Wire.endTransmission();
-  
     Wire.beginTransmission(RTC_I2C_ADDR); 
     Wire.write(RTC_YEAR);             
     Wire.endTransmission();
@@ -294,7 +288,7 @@ else if(state == 1) // GET YEAR
     lcd.setCursor(0, 0);
     sprintf(Temp,"Set year: 20%02d",value);
     lcd.print(Temp);
-     state++;
+    state++;
   }
   else if(state == 2) // SET YEAR
   {
@@ -305,20 +299,21 @@ else if(state == 1) // GET YEAR
         value++;
       else
         value = 1;
-      delay(200);
+        
       sprintf(Temp,"%02d",value);
       lcd.print(Temp);
+      delay(200);
     }
     // Check for request to set starting values
     if(digitalRead(P1_4) == LOW)
     {
       state++;
+      
       if(value%4 == 0)
         leapYear = 1;
       else
         leapYear = 0;
-      lcd.setCursor(0,1);
-      lcd.print(leapYear);
+        
       mybuff[6]=convertToHexish(value);
       delay(500);
     }
@@ -329,17 +324,18 @@ else if(state == 1) // GET YEAR
     Wire.write(RTC_MONTH);             
     Wire.endTransmission();
     Wire.requestFrom(RTC_I2C_ADDR,1);
-    value=convertToDec(Wire.read());
+    value=convertToDec(Wire.read() & 0x1f);
   
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Set month: ");
     lcd.print(MonthName[value-1]);
-     state++;
+    state++;
   }
   else if(state == 4) // SET MONTH
   {
     lcd.setCursor(11,0);
+    
     if(digitalRead(P1_3) == LOW)
     {
       if(value < 12)
@@ -349,6 +345,7 @@ else if(state == 1) // GET YEAR
       lcd.print(MonthName[value-1]);
       delay(400);
     }
+    
     // Check for request to set starting values
     if(digitalRead(P1_4) == LOW)
     {
@@ -363,8 +360,12 @@ else if(state == 1) // GET YEAR
         monthLength = 30;
       else
         monthLength = 31;
+        
       state++;
-      mybuff[5]=convertToHexish(value);
+      if(leapYear == 1)
+        mybuff[5] = 0x20 | convertToHexish(value);
+      else
+        mybuff[5] = convertToHexish(value);
       delay(500);
     }
   }
@@ -380,8 +381,8 @@ else if(state == 1) // GET YEAR
     lcd.setCursor(0, 0);
     lcd.print("Set day: ");
     sprintf(Temp,"%02d",value);
-      lcd.print(Temp);
-     state++;
+    lcd.print(Temp);
+    state++;
   }
   else if(state == 6) // SET DAY
   {
@@ -396,6 +397,7 @@ else if(state == 1) // GET YEAR
       lcd.print(Temp);
       delay(300);
     }
+    
     // Check for request to set starting values
     if(digitalRead(P1_4) == LOW)
     {
@@ -429,6 +431,7 @@ else if(state == 1) // GET YEAR
         value++;
       else
         value = 1;
+        
       lcd.print(DayOfWeek[value-1]);
       delay(500);
     }
@@ -459,7 +462,7 @@ else if(state == 1) // GET YEAR
     lcd.setCursor(10,0);
     if(digitalRead(P1_3) == LOW)
     {
-      if(value < 24)
+      if(value < 23)
         value++;
       else
         value = 0;
@@ -467,6 +470,7 @@ else if(state == 1) // GET YEAR
       lcd.print(Temp);
       delay(400);
     }
+    
     // Check for request to set starting values
     if(digitalRead(P1_4) == LOW)
     {
@@ -502,6 +506,7 @@ else if(state == 1) // GET YEAR
       lcd.print(Temp);
       delay(200);
     }
+    
     // Check for request to set starting values
     if(digitalRead(P1_4) == LOW)
     {
@@ -512,24 +517,15 @@ else if(state == 1) // GET YEAR
   }
   else if(state == 13)
   {
-      //Wire.setModule(0); // Required to select MSP430G2553IN20 pins 14/15 for I2C
-  //Wire.begin(); // Initialize connection to I2C bus as master.
-  
-  // Set minutes, hours, day, date, month, year
-  mybuff[0] = RTC_MINS;
-  mybuff[7] = 0x43;
-  Wire.beginTransmission(RTC_I2C_ADDR);
-  Wire.write(mybuff,7);
-  Wire.endTransmission();
+    // Set minutes, hours, day, date, month, year
+    mybuff[0] = RTC_MINS;
+    mybuff[7] = 0x43;
+    Wire.beginTransmission(RTC_I2C_ADDR);
+    Wire.write(mybuff,8);
+    Wire.endTransmission();
 
-  // Enable RTC with initialized seconds at 00 (BCD-ish), see Datasheet
-  mybuff[0]=RTC_ST_SEC; mybuff[1]=0x80;
-  Wire.beginTransmission(RTC_I2C_ADDR);
-  Wire.write(mybuff,2);
-  Wire.endTransmission();
-
-  // Go back to clock and temp display
-  lcd.clear();
-  state = 0;
+    // Go back to clock and temp display
+    lcd.clear();
+    state = 0;
   }
 }
