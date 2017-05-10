@@ -533,12 +533,6 @@ else if(state == 1) // Stop clock and GET YEAR
     Wire.write(mybuff,8);
     Wire.endTransmission();
 
-    Wire.beginTransmission(RTC_I2C_ADDR); 
-    Wire.write(RTC_DATE);             
-    Wire.endTransmission();
-    Wire.requestFrom(RTC_I2C_ADDR,1);
-    value=Wire.read();
-
     // Go back to clock and temp display
     lcd.clear();
     state = 0;
