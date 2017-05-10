@@ -325,7 +325,7 @@ else if(state == 1) // Stop clock and GET YEAR
     Wire.endTransmission();
     Wire.requestFrom(RTC_I2C_ADDR,1);
     value=convertToDec(Wire.read() & 0x1f);
-  
+    
     lcd.clear();
     lcd.setCursor(0, 0);
     lcd.print("Set month: ");
@@ -376,6 +376,11 @@ else if(state == 1) // Stop clock and GET YEAR
     Wire.endTransmission();
     Wire.requestFrom(RTC_I2C_ADDR,1);
     value=convertToDec(Wire.read());
+
+    if(value > monthLength)
+    {
+      value = monthLength;
+    }
   
     lcd.clear();
     lcd.setCursor(0, 0);
@@ -523,6 +528,16 @@ else if(state == 1) // Stop clock and GET YEAR
     Wire.beginTransmission(RTC_I2C_ADDR);
     Wire.write(mybuff,8);
     Wire.endTransmission();
+
+    Wire.beginTransmission(RTC_I2C_ADDR);
+    Wire.write(mybuff,8);
+    Wire.endTransmission();
+
+    Wire.beginTransmission(RTC_I2C_ADDR); 
+    Wire.write(RTC_DATE);             
+    Wire.endTransmission();
+    Wire.requestFrom(RTC_I2C_ADDR,1);
+    value=Wire.read();
 
     // Go back to clock and temp display
     lcd.clear();
