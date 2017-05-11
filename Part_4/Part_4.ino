@@ -716,15 +716,26 @@ void loop() {
     else if(digitalRead(P1_3) == LOW)
     {
       lcd.clear();
+      if(alarmSetting == 0)
+      {
+        lcd.setCursor(0,0);
+        lcd.print("No alarms are");
+        lcd.setCursor(0,1);
+        lcd.print("set.");
+        state = 0;
+      }
+      else
+      {
         lcd.setCursor(0,0);
         lcd.print("Choose alarm to");
         lcd.setCursor(0,1);
         lcd.print("remove.");
-        delay(2000);
-        lcd.clear();
-        delay(100);
         state = 17;
+      }
     }
+    delay(2000);
+    lcd.clear();
+    delay(100);
   }
   else if(state == 17) // Choose daily or single alarm for removing
   {
