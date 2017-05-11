@@ -46,6 +46,7 @@ int  fracF;
 char Temp[7];
 byte state;
 byte settingAlarm;
+byte alarmSetting;
 byte blinkLED;
 bool LEDon;
 
@@ -141,6 +142,7 @@ void setup() {
   //-----------------------------------------------------------------------------------------
   state = 0;
   settingAlarm = 0;
+  alarmSetting = 0;
   blinkLED = 0;
   LEDon = 1;
   oneTimeAlarm[0] = 0x80;
@@ -296,6 +298,18 @@ void loop() {
     {
       digitalWrite(P1_0, HIGH);
     }
+
+    // Display which alarms are currently active
+    lcd.setCursor(9,0);
+    if(alarmSetting == 3)
+      lcd.print("DO");
+    else if(alarmSetting == 2)
+      lcd.print("D ");
+    else if(alarmSetting == 1)
+      lcd.print(" O");
+    else
+      lcd.print("  ");
+    
     
 //||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
 
@@ -311,37 +325,23 @@ void loop() {
     fracC=convertFractionalPart(RfractionValue);
     convertCtoF(RwholeValue,fracC,&wholeF,&fracF);
 
-    // Check for request to change temp reading or disable alarm
+    // Check for request to change temp reading or disable or clear alarms
     if(digitalRead(P1_3) == LOW)
     {
-      if(blinkLED)
-      {
-        blinkLED = 0;
-        LEDon = 1;
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print("Turned Alarm Off");
-        delay(2000);
-        lcd.clear();
-        delay(100);
-      }
-      else
-      {
-        CorF = !CorF;
-      }
       delay(500);
+      state = 16;
     }
   
     if(CorF == 1)
     { 
-      sprintf(Temp,"%d.%01d C",RwholeValue,round(convertFractionalPart(RfractionValue)/1000));
-      lcd.setCursor(10, 0);
+      sprintf(Temp,"%d C",RwholeValue);
+      lcd.setCursor(12, 0);
       lcd.print(Temp);
     }
     else
     {
-      sprintf(Temp,"%d.%01d F",wholeF,round(fracF/1000));
-      lcd.setCursor(10, 0);
+      sprintf(Temp,"%d F",wholeF);
+      lcd.setCursor(12, 0);
       lcd.print(Temp);
     }
 
@@ -663,19 +663,104 @@ void loop() {
       lcd.print("One-time: red");
     }
   }
-  else if(state == 15) // Choose daily or single alarm
+  else if(state == 15) // Choose daily or single alarm for setting
   {
-    if(digitalRead(P1_4) == LOW)
+    if(digitalRead(P1_4) == LOW) // Set daily alarm
     {
       state = 9;
       settingAlarm = 2;
+      if(alarmSetting == 1)
+        alarmSetting = 3;
+      else if(alarmSetting == 0)
+        alarmSetting = 2;
+      dailyAlarm[0] = 0x80;
+      delay(500);
+    }
+    if(digitalRead(P1_3) == LOW) // Set One-time Alarm
+    {
+      state = 1;
+      settingAlarm = 1;
+      if(alarmSetting == 2)
+        alarmSetting = 3;
+      else if(alarmSetting == 0)
+        alarmSetting = 1;
+      oneTimeAlarm[0] = 0x80;
+      delay(500);
+    }
+  }
+  else if(state == 16)
+  {
+    if(digitalRead(P1_3) == HIGH)
+    {
+      if(blinkLED)
+      {
+        if(alarmSetting == 1)
+          alarmSetting = 0;
+        else if(alarmSetting == 3)
+          alarmSetting = 2;
+        blinkLED = 0;
+        LEDon = 1;
+        lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("Turned Alarm Off");
+        delay(2000);
+        lcd.clear();
+        delay(100);
+      }
+      else
+      {
+        CorF = !CorF;
+      }
+      state = 0;
+    }
+    else if(digitalRead(P1_3) == LOW)
+    {
+      lcd.clear();
+        lcd.setCursor(0,0);
+        lcd.print("Choose alarm to");
+        lcd.setCursor(0,1);
+        lcd.print("remove.");
+        delay(2000);
+        lcd.clear();
+        delay(100);
+        state = 17;
+    }
+  }
+  else if(state == 17) // Choose daily or single alarm for removing
+  {
+    // Display options
+    lcd.clear();
+    lcd.setCursor(0,0);
+    lcd.print("Daily: black");
+    lcd.setCursor(0,1);
+    lcd.print("One-time: red");
+    delay(50);
+    
+    // Button choice
+    if(digitalRead(P1_4) == LOW)
+    {
+      if(alarmSetting == 3)
+        alarmSetting = 1;
+      else if(alarmSetting == 2)
+        alarmSetting = 0;
+      dailyAlarm[0] = 0xff;
+
+      lcd.clear();
+      state = 0;
       delay(500);
     }
     if(digitalRead(P1_3) == LOW)
     {
-      state = 1;
-      settingAlarm = 1;
+      if(alarmSetting == 3)
+        alarmSetting = 2;
+      else if(alarmSetting == 1)
+        alarmSetting = 0;
+      oneTimeAlarm[0] = 0xff;
+      
+      lcd.clear();
+      state = 0;
       delay(500);
     }
+    
   }
 }
