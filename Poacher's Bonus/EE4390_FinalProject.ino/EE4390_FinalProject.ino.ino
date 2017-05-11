@@ -82,10 +82,18 @@ byte convertToHexish(byte value)
 }
 
 void setup() {
-  
+
+
+    Wire.beginTransmission(RTC_I2C_ADDR); 
+    Wire.write(RTC_DAY);             
+    Wire.endTransmission();
+    Wire.requestFrom(RTC_I2C_ADDR,1);
+    value=Wire.read();
+    
   //Set up the RTC
   //---------------------------------------------------------------------------------------
-  
+  if(value != 0x19)
+  {
   Wire.setModule(0); // Required to select MSP430G2553IN20 pins 14/15 for I2C
   Wire.begin(); // Initialize connection to I2C bus as master.
   // Disable RTC in order to allow for unambiguous set-up of time/date.
@@ -97,7 +105,7 @@ void setup() {
   mybuff[0]=RTC_MINS; // Address to begin writing into RTC
   mybuff[1]=0x00;       // Minute count is 00 (BCD)
   mybuff[2]=0x00;       // 24hr format, hour is 00 
-  mybuff[3]=0x01;       // First day of the week
+  mybuff[3]=0x09;       // First day of the week, VBATEN Set
   mybuff[4]=0x01;       // 1st day of the month
   mybuff[5]=0x01;       // 1st month of the year
   mybuff[6]=0x01;       // year 2001
@@ -110,6 +118,35 @@ void setup() {
   Wire.beginTransmission(RTC_I2C_ADDR);
   Wire.write(mybuff,2);
   Wire.endTransmission();
+  }
+
+  else
+  {
+    Wire.setModule(0); // Required to select MSP430G2553IN20 pins 14/15 for I2C
+  Wire.begin(); // Initialize connection to I2C bus as master.
+  // Disable RTC in order to allow for unambiguous set-up of time/date.
+  mybuff[0]=RTC_ST_SEC; mybuff[1]=0x00;
+  Wire.beginTransmission(RTC_I2C_ADDR);
+  Wire.write(mybuff,2);
+  Wire.endTransmission();
+  // Set minutes, hours, day, date, month, year
+  mybuff[0]=RTC_MINS; // Address to begin writing into RTC
+  mybuff[1]=0x05;       // Minute count is 00 (BCD)
+  mybuff[2]=0x05;       // 24hr format, hour is 00 
+  mybuff[3]=0x0A;       // First day of the week, VBATEN Set
+  mybuff[4]=0x05;       // 1st day of the month
+  mybuff[5]=0x05;       // 1st month of the year
+  mybuff[6]=0x05;       // year 2001
+  mybuff[7]=0x43;       // No alarms, square wave output at 32.768 kHz
+  Wire.beginTransmission(RTC_I2C_ADDR);
+  Wire.write(mybuff,8);
+  Wire.endTransmission();
+  // Enable RTC with initialized seconds at 00 (BCD-ish), see Datasheet
+  mybuff[0]=RTC_ST_SEC; mybuff[1]=0x80;
+  Wire.beginTransmission(RTC_I2C_ADDR);
+  Wire.write(mybuff,2);
+  Wire.endTransmission();
+  }
 
 
  //Set up the Thermometer
@@ -252,7 +289,7 @@ void loop() {
     value=Wire.read();
 
     lcd.setCursor(12, 1);
-    lcd.print(DayOfWeek[(value & 0x0f)-1]);
+    lcd.print(DayOfWeek[(value & 0x07)-1]);
 
     // CHECK FOR ALARM
     //---------------------------------------------------------------------------------------
@@ -314,22 +351,8 @@ void loop() {
     // Check for request to change temp reading or disable alarm
     if(digitalRead(P1_3) == LOW)
     {
-      if(blinkLED)
-      {
-        blinkLED = 0;
-        LEDon = 1;
-        lcd.clear();
-        lcd.setCursor(0,0);
-        lcd.print("Turned Alarm Off");
-        delay(2000);
-        lcd.clear();
-        delay(100);
-      }
-      else
-      {
-        CorF = !CorF;
-      }
       delay(500);
+      state = 16;
     }
   
     if(CorF == 1)
@@ -677,5 +700,24 @@ void loop() {
       settingAlarm = 1;
       delay(500);
     }
+  }
+  else if(state == 16) // Turn off alarm or change temp unit
+  {
+    if(digitalRead(P1_3) == LOW)
+    {
+      blinkLED = 0;
+      LEDon = 1;
+      lcd.clear();
+      lcd.setCursor(0,0);
+      lcd.print("Turned Alarm Off");
+      delay(2000);
+      lcd.clear();
+      delay(100);
+    }
+    else if(digitalRead(P1_3) == HIGH)
+    {
+      CorF = !CorF;
+    }
+    state = 0;
   }
 }
